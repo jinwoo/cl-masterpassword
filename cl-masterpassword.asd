@@ -1,7 +1,7 @@
 (asdf:defsystem #:cl-masterpassword
   :description "Common Lisp version of Master Password"
   :author "Jinwoo Lee"
-  :license "GPL"
+  :license "MIT"
   :depends-on (#:babel
                #:ironclad)
   :serial t
