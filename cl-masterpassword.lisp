@@ -1,9 +1,8 @@
 (in-package #:cl-masterpassword)
 
 (defparameter *password-scope* "com.lyndir.masterpassword")
-(defparameter *key-n* 32768)
-(defparameter *key-r* 8)
-(defparameter *key-p* 2)
+(defparameter *kdf* (ironclad:make-kdf 'ironclad:scrypt-kdf :n 32768 :r 8 :p 2)
+  "Key derivation function.")
 (defparameter *key-length* 64)
 
 (defparameter *templates*
@@ -68,11 +67,8 @@
                            (string->octets *password-scope*)
                            (int32->octets (length full-name))
                            (string->octets full-name)))
-        (password (string->octets master-password))
-        (kdf (ironclad:make-kdf 'ironclad:scrypt-kdf :n *key-n*
-                                                     :r *key-r*
-                                                     :p *key-p*)))
-    (ironclad:derive-key kdf password salt 0 *key-length*)))
+        (password (string->octets master-password)))
+    (ironclad:derive-key *kdf* password salt 0 *key-length*)))
 
 (defun seed (master-key site-name site-counter)
   (declare (octets master-key) (string site-name) (int32 site-counter))
