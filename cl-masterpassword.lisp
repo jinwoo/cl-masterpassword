@@ -1,6 +1,19 @@
 (in-package #:cl-masterpassword)
 
-(defparameter *password-scope* "com.lyndir.masterpassword")
+(deftype octet () '(unsigned-byte 8))
+(deftype octets () '(vector octet))
+(deftype uint32 () '(unsigned-byte 32))
+(deftype template-type () '(member :maximum :long :medium :short :basic :pin))
+
+(defun string->octets (string)
+  (declare (string string))
+  (babel:string-to-octets string))
+
+(defun uint32->octets (value)
+  (declare (uint32 value))
+  (ironclad:integer-to-octets value :n-bits 32))
+
+(defparameter *password-scope* (string->octets "com.lyndir.masterpassword"))
 (defparameter *kdf* (ironclad:make-kdf 'ironclad:scrypt-kdf :n 32768 :r 8 :p 2)
   "Key derivation function.")
 (defparameter *key-length* 64)
@@ -48,35 +61,22 @@
     (#\o . "@&%?,=[]_:-+*$#!'^~;()/.")
     (#\x . "AEIOUaeiouBCDFGHJKLMNPQRSTVWXYZbcdfghjklmnpqrstvwxyz0123456789!@#$%^&*()")))
 
-(deftype octet () '(unsigned-byte 8))
-(deftype octets () '(vector octet))
-(deftype int32 () '(unsigned-byte 32))
-(deftype template-type () '(member :maximum :long :medium :short :basic :pin))
-
-(defun string->octets (string)
-  (declare (string string))
-  (babel:string-to-octets string))
-
-(defun int32->octets (value)
-  (declare (int32 value))
-  (ironclad:integer-to-octets value :n-bits 32))
-
 (defun master-key (full-name master-password)
   (declare (string full-name master-password))
   (let ((salt (concatenate 'octets
-                           (string->octets *password-scope*)
-                           (int32->octets (length full-name))
+                           *password-scope*
+                           (uint32->octets (length full-name))
                            (string->octets full-name)))
         (password (string->octets master-password)))
     (ironclad:derive-key *kdf* password salt 0 *key-length*)))
 
 (defun seed (master-key site-name site-counter)
-  (declare (octets master-key) (string site-name) (int32 site-counter))
+  (declare (octets master-key) (string site-name) (uint32 site-counter))
   (let ((hmac (ironclad:make-hmac master-key :sha256)))
-    (ironclad:update-hmac hmac (string->octets *password-scope*))
-    (ironclad:update-hmac hmac (int32->octets (length site-name)))
+    (ironclad:update-hmac hmac *password-scope*)
+    (ironclad:update-hmac hmac (uint32->octets (length site-name)))
     (ironclad:update-hmac hmac (string->octets site-name))
-    (ironclad:update-hmac hmac (int32->octets site-counter))
+    (ironclad:update-hmac hmac (uint32->octets site-counter))
     (ironclad:hmac-digest hmac)))
 
 (defun template (seed type)
