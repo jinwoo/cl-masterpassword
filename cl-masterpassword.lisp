@@ -79,19 +79,24 @@
     (ironclad:update-hmac hmac (uint32->octets site-counter))
     (ironclad:hmac-digest hmac)))
 
-(defun template (seed type)
-  (declare (octets seed) (template-type type))
-  (let ((candidates (cdr (assoc type *templates* :test #'eq))))
-    (aref candidates (mod (aref seed 0) (length candidates)))))
+(defun choose-by-key&index (alist key index &key (test #'eql))
+  (declare (list alist) (fixnum index))
+  (let ((choices (cdr (assoc key alist :test test))))
+    (aref choices (mod index (length choices)))))
 
+(declaim (inline template))
+(defun template (type seed-byte)
+  (declare (template-type type) (octet seed-byte))
+  (choose-by-key&index *templates* type seed-byte :test #'eq))
+
+(declaim (inline password-character))
 (defun password-character (class seed-byte)
   (declare (character class) (octet seed-byte))
-  (let ((choices (cdr (assoc class *password-characters*))))
-    (aref choices (mod seed-byte (length choices)))))
+  (choose-by-key&index *password-characters* class seed-byte))
 
 (defun password (seed type)
   (declare (octets seed) (template-type type))
-  (coerce (loop for c across (template seed type)
+  (coerce (loop for c across (template type (aref seed 0))
                 for i from 1
                 collect (password-character c (aref seed i)))
           'string))
