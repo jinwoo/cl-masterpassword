@@ -1,2 +1,6 @@
 (defpackage #:cl-masterpassword
-  (:use #:cl))
+  (:use #:cl)
+  (:export #:master-key
+           #:password
+           #:seed
+           #:template-type))
